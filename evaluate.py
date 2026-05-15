@@ -18,7 +18,7 @@ def run_episode(env, model=None, fixed_timer=False):
         if model is not None:                       # if a model is passed in
             action, _ = model.predict(obs)          # model picks an action - "model looks at current state and makes an informed decision"
         elif fixed_timer:                           # if fixed timer is enabled
-            action = 1 if env.time_in_phase >= 10 else 0    # switch green lights every 10 timesteps
+            action = 1 if env.time_in_phase >= 10 and env.time_in_phase >= env.min_green_time else 0  # switch green lights at fixed timesteps
         else:                                       # if no model is passed in
             action = env.action_space.sample()      # picks a random action (0 or 1) - serves as random baseline controller
 
