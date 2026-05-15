@@ -36,15 +36,12 @@ class TrafficEnv(gym.Env):
 
         # variables to track state of intersection at a given time
         # can be thought of as memory of simulation
-        # -> ns_queue & ew_queue = number of cars waiting in each direction
-        # -> current_phase = which direction has green light now
-        # -> time_in_phase = how long light has been green for
-        # -> step_count = tracks how many timesteps have passed in current episode
-        self.ns_queue = 0
-        self.ew_queue = 0
-        self.current_phase = 0
-        self.time_in_phase = 0
-        self.step_count = 0
+        self.ns_queue = 0           # number of cars waiting in the N/S direction
+        self.ew_queue = 0           # number of cars waiting in the E/W direction
+        self.current_phase = 0      # which direction has the green light currently
+        self.time_in_phase = 0      # how long has the green light been green for
+        self.step_count = 0         # how many timesteps have passed in the current episode
+        self.min_green_time = 5     # minimum timesteps a light must stay green before switching is allowed
 
 
 
@@ -109,13 +106,14 @@ class TrafficEnv(gym.Env):
 
 
         # calculate switch penalty before phase updates
-        switch_penalty = 5 if action != self.current_phase else 0   # penalizes agent for switching phases uneccessarily
+        # -> penalizes agent for switching phases uneccessarily
+        switch_penalty = 5 if action != self.current_phase and self.time_in_phase >= self.min_green_time else 0
 
 
         # handle phase switch
-        # if agent's selected phase is different from current phase, switch phases
-        # else, increment time in current phase
-        if action != self.current_phase:    # scenario when agent chooses a different phase than what's currently active
+        # switches if agent picks a different action AND the light has been green for long enough
+        # else increments the time in the current phase
+        if action != self.current_phase and self.time_in_phase >= self.min_green_time:
             self.current_phase = action
             self.time_in_phase = 0
         else:
