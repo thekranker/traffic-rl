@@ -23,13 +23,14 @@ class TrafficEnv(gym.Env):
 
 
         # defines what the agent can see
-        # agent sees 4 numbers between 0-100
+        # agent sees 5 numbers between 0-500
         # -> N/S queue length
         # -> E/W queue length
         # -> current phase
         # -> time spent in phase
+        # -> current timestep (step_count) - gives agent explicit time of day awareness
         self.observation_space = gym.spaces.Box(
-            low=0, high=100, shape=(4,), dtype=np.float32
+            low=0, high=500, shape=(5,), dtype=np.float32
         )
 
 
@@ -59,9 +60,9 @@ class TrafficEnv(gym.Env):
 
 
         # called so that the RL algorithm knows what the starting environment looks like
-        # packages all 4 state var's into a numpy array
+        # packages all 5 state var's into a numpy array
         # -> list of numbers that the agent can read
-        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase], dtype=np.float32), {}
+        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count], dtype=np.float32), {}
     
 
 
@@ -134,12 +135,11 @@ class TrafficEnv(gym.Env):
 
 
         # hands back 5 things to RL algorithm after every step
-        # -> the new observation (4 numbers [0-100]: ns_queue, we_queue, current_phase, time_in_phase)
+        # -> the new observation (5 numbers [0-500]: ns_queue, we_queue, current_phase, time_in_phase, step_count)
         # -> the reward the agent just earned
         # -> 'done' boolean - whether the episode is over
         # -> 'False' - required done-like flag called 'truncated' by Gymnasium (not currently needed)
         # -> '{}' empty dictionary required by Gymnasium for techical reasons
-        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase], dtype=np.float32), reward, done, False, {}
-    
+        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count], dtype=np.float32), reward, done, False, {}    
 
 
