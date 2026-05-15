@@ -4,7 +4,7 @@ import gymnasium as gym     # provides template for environment to follow
 
 
 
-# Blueprint For the Environment
+# blueprint for the environment
 # gym.Env is the 'Gymnasium' template we are building on top of 
 # -> class inherits all the structure of a 'Gymnasium' environment
 class TrafficEnv(gym.Env):
