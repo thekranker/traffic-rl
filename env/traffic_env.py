@@ -65,6 +65,24 @@ class TrafficEnv(gym.Env):
     
 
 
+
+    # simulates time-of-day traffic patterns to challenge agent
+    # returns N/S arrival rate & E/W arrival rate
+    def _get_arrival_rates(self):
+        if self.step_count < 100:   # quiet period
+            return 1, 1
+        elif self.step_count < 200: # morning rush - N/S heavy
+            return 5, 1
+        elif self.step_count < 300: # midday - moderate and balanced
+            return 2, 2
+        elif self.step_count < 400: # evening rush - both directions busy
+            return 4, 3
+        else:                       # night - low traffic
+            return 1, 1
+
+
+
+
     # called once every timestep
     # timestep can be thought of as one second passing at the intersection
     # 1.) when called, agent passes in an action (0 or 1)
@@ -73,8 +91,9 @@ class TrafficEnv(gym.Env):
     def step(self, action):
 
         # new cars arrive each timestep
-        self.ns_queue += np.random.poisson(3)   # generates a random number of cars arriving at intersection (avg = 3)
-        self.ew_queue += np.random.poisson(1)   # generates a random number of cars arriving at intersection (avg = 1)
+        ns_rate, ew_rate = self._get_arrival_rates()
+        self.ns_queue += np.random.poisson(ns_rate)
+        self.ew_queue += np.random.poisson(ew_rate)
 
 
 
