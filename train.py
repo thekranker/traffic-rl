@@ -18,7 +18,7 @@ model = DQN(
 
 # runs the training of the agent
 # note that 500 timesteps = 1 episode
-model.learn(total_timesteps=200000)
+model.learn(total_timesteps=500000)
 
 
 
