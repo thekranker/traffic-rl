@@ -88,6 +88,9 @@ class TrafficEnv(gym.Env):
             self.ew_queue = max(0, self.ew_queue - 5)
 
 
+        # calculate switch penalty before phase updates
+        switch_penalty = 5 if action != self.current_phase else 0   # penalizes agent for switching phases uneccessarily
+
 
         # handle phase switch
         # if agent's selected phase is different from current phase, switch phases
@@ -101,9 +104,9 @@ class TrafficEnv(gym.Env):
 
 
         # calculate reward
-        wait = self.ns_queue + self.ew_queue    # total number of cars waiting across both directions combined
-        reward = -wait                          # penalizes agent for any waiting car
-        self.step_count += 1                    # ticks clock forward one timestep
+        wait = self.ns_queue + self.ew_queue                        # total number of cars waiting across both directions combined
+        reward = -wait - switch_penalty                             # penalizes agent for any waiting car
+        self.step_count += 1                                        # ticks clock forward one timestep
 
 
 
