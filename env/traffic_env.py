@@ -42,6 +42,7 @@ class TrafficEnv(gym.Env):
         self.time_in_phase = 0      # how long has the green light been green for
         self.step_count = 0         # how many timesteps have passed in the current episode
         self.min_green_time = 5     # minimum timesteps a light must stay green before switching is allowed
+        self.max_queue = 50         # maximum queue length before overflow penalty is applied
 
 
 
@@ -121,10 +122,15 @@ class TrafficEnv(gym.Env):
 
 
 
-        # calculate reward
-        wait = self.ns_queue + self.ew_queue                        # total number of cars waiting across both directions combined
-        reward = -wait - switch_penalty                             # penalizes agent for any waiting car
-        self.step_count += 1                                        # ticks clock forward one timestep
+        # calculates reward
+        # penalizes agent for either
+        # - any waiting car
+        # - changing green lights (to prevent rapid switching)
+        # - the number of cars waiting on one side exceeds the max permitted
+        wait = self.ns_queue + self.ew_queue
+        overflow_penalty = 50 if self.ns_queue > self.max_queue or self.ew_queue > self.max_queue else 0
+        reward = -wait - switch_penalty - overflow_penalty
+        self.step_count += 1
 
 
 
