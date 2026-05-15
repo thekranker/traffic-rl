@@ -73,8 +73,8 @@ class TrafficEnv(gym.Env):
     def step(self, action):
 
         # new cars arrive each timestep
-        self.ns_queue += np.random.poisson(2)   # generates a random number of cars arriving at intersection (avg = 2)
-        self.ew_queue += np.random.poisson(2)   # generates a random number of cars arriving at intersection (avg = 2)
+        self.ns_queue += np.random.poisson(3)   # generates a random number of cars arriving at intersection (avg = 3)
+        self.ew_queue += np.random.poisson(1)   # generates a random number of cars arriving at intersection (avg = 1)
 
 
 
@@ -83,9 +83,9 @@ class TrafficEnv(gym.Env):
         # if 'current_phase' = 1, we let 3 cars through EW queue each timestep
         # max(0, ...) such that queue never goes negative
         if self.current_phase == 0:
-            self.ns_queue = max(0, self.ns_queue - 3)
+            self.ns_queue = max(0, self.ns_queue - 5)
         else:
-            self.ew_queue = max(0, self.ew_queue - 3)
+            self.ew_queue = max(0, self.ew_queue - 5)
 
 
 
