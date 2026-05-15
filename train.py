@@ -35,10 +35,17 @@ print("Training complete. Model saved.")    # confirms in the terminal that trai
 # plots the learning curve - total reward per episode throughout training
 # upward trend = agent is learning and improving over time
 plt.figure(figsize=(10, 6))             # makes the chart wider and taller for better visibility
-plt.plot(callback.episode_rewards)      # plots total reward for each episode
+
+# raw episode rewards (faded)
+plt.plot(callback.episode_rewards, alpha=0.3, color='gray', label="Raw")
+
+# 5000 episode rolling average
+plt.plot(np.convolve(callback.episode_rewards, np.ones(5000)/5000, mode='valid'), color='steelblue', label="Smoothed")
+
 plt.xlabel("Episode")                   # x axis label
 plt.ylabel("Total Reward")              # y axis label
 plt.title("Agent Learning Curve")       # chart title
+plt.legend()                            # draws legend identifying each line
 plt.tight_layout()                      # prevents labels from being cut off
 plt.savefig("learning_curve.png")       # saves chart as image under 'learning_curve.png'
 plt.show()                              # displays chart on screen
