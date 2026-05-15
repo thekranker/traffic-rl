@@ -17,8 +17,7 @@ model = DQN(
 
 
 # runs the training of the agent
-# tells the agent to interact with the environment for 50,000 timesteps 
-# -> aka. 100 complete episodes as defined in 'traffic_env.py'
+# note that 500 timesteps = 1 episode
 model.learn(total_timesteps=200000)
 
 
