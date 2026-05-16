@@ -18,20 +18,21 @@ class TrafficEnv(gym.Env):
 
         # defines what the agent is allowed to do
         # 'Discrete(2) indicates exactly 2 choices 
-        # -> 0 = keep N/S signal green
-        # -> 1 = keep E/W signal green
+        # - 0 = keep N/S signal green
+        # - 1 = keep E/W signal green
         self.action_space = gym.spaces.Discrete(2)
 
 
         # defines what the agent can see
-        # agent sees 5 numbers between 0-500
-        # -> N/S queue length
-        # -> E/W queue length
-        # -> current phase
-        # -> time spent in phase
-        # -> current timestep (step_count) - gives agent explicit time of day awareness
+        # agent sees 6 numbers between 0-500
+        # - N/S queue length
+        # - E/W queue length
+        # - current phase
+        # - time spent in phase
+        # - current timestep (step_count) - gives agent explicit time of day awareness
+        # - N/S to E/W queue ratio - gives agent explicit relative busyness awareness
         self.observation_space = gym.spaces.Box(
-            low=0, high=500, shape=(5,), dtype=np.float32
+            low=0, high=500, shape=(6,), dtype=np.float32
         )
 
 
@@ -59,6 +60,9 @@ class TrafficEnv(gym.Env):
         self.time_in_phase = 0
         self.step_count = 0
 
+        # calculates the ratio of cars in the N/S queue to the E/W queue
+        ratio = self.ns_queue / (self.ew_queue + 1)
+
 
         # randomizes arrival rate multipliers at the start of each episode
         # -> forces agent to learn a general policy across many traffic conditions
@@ -68,9 +72,9 @@ class TrafficEnv(gym.Env):
 
 
         # called so that the RL algorithm knows what the starting environment looks like
-        # packages all 5 state var's into a numpy array
+        # packages all 6 state var's into a numpy array
         # -> list of numbers that the agent can read
-        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count], dtype=np.float32), {}
+        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count, ratio], dtype=np.float32), {}
     
 
 
@@ -136,7 +140,6 @@ class TrafficEnv(gym.Env):
             self.time_in_phase += 1
 
 
-
         # calculates reward
         # penalizes agent for either
         # - any waiting car
@@ -150,17 +153,19 @@ class TrafficEnv(gym.Env):
         self.step_count += 1
 
 
-
         # end episode after 500 timesteps
         done = self.step_count >= 500
 
+    
+        # calculates the ratio of cars in the N/S queue to the E/W queue
+        ratio = self.ns_queue / (self.ew_queue + 1)
 
         # hands back 5 things to RL algorithm after every step
-        # -> the new observation (5 numbers [0-500]: ns_queue, we_queue, current_phase, time_in_phase, step_count)
+        # -> the new observation (6 numbers [0-500]: ns_queue, we_queue, current_phase, time_in_phase, step_count, ratio)
         # -> the reward the agent just earned
         # -> 'done' boolean - whether the episode is over
         # -> 'False' - required done-like flag called 'truncated' by Gymnasium (not currently needed)
         # -> '{}' empty dictionary required by Gymnasium for techical reasons
-        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count], dtype=np.float32), reward, done, False, {}    
+        return np.array([self.ns_queue, self.ew_queue, self.current_phase, self.time_in_phase, self.step_count, ratio], dtype=np.float32), reward, done, False, {}    
 
 
