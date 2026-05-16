@@ -11,7 +11,8 @@ class TrafficEnv(gym.Env):
 
 
 
-    def __init__(self):
+    def __init__(self, ns_multiplier=1.0, ew_multiplier=1.0):
+
         super().__init__()  # runs 'Gymnasium' setup code before we add ours
 
 
@@ -36,13 +37,15 @@ class TrafficEnv(gym.Env):
 
         # variables to track state of intersection at a given time
         # can be thought of as memory of simulation
-        self.ns_queue = 0           # number of cars waiting in the N/S direction
-        self.ew_queue = 0           # number of cars waiting in the E/W direction
-        self.current_phase = 0      # which direction has the green light currently
-        self.time_in_phase = 0      # how long has the green light been green for
-        self.step_count = 0         # how many timesteps have passed in the current episode
-        self.min_green_time = 5     # minimum timesteps a light must stay green before switching is allowed
-        self.max_queue = 50         # maximum queue length before overflow penalty is applied
+        self.ns_queue = 0                   # number of cars waiting in the N/S direction
+        self.ew_queue = 0                   # number of cars waiting in the E/W direction
+        self.current_phase = 0              # which direction has the green light currently
+        self.time_in_phase = 0              # how long has the green light been green for
+        self.step_count = 0                 # how many timesteps have passed in the current episode
+        self.min_green_time = 5             # minimum timesteps a light must stay green before switching is allowed
+        self.max_queue = 50                 # maximum queue length before overflow penalty is applied
+        self.ns_multiplier = ns_multiplier  # scales N/S arrival rates for robustness testing
+        self.ew_multiplier = ew_multiplier  # scales E/W arrival rates for robustness testing
 
 
 
@@ -67,17 +70,22 @@ class TrafficEnv(gym.Env):
 
     # simulates time-of-day traffic patterns to challenge agent
     # returns N/S arrival rate & E/W arrival rate
+    # multipliers default to 1.0 (no change) during training
+    # -> multipliers can be adjusted at evaluation time to test robustness
     def _get_arrival_rates(self):
-        if self.step_count < 100:   # quiet period
-            return 1, 1
-        elif self.step_count < 200: # morning rush - N/S heavy
-            return 5, 1
-        elif self.step_count < 300: # midday - moderate and balanced
-            return 2, 2
-        elif self.step_count < 400: # evening rush - both directions busy
-            return 4, 3
-        else:                       # night - low traffic
-            return 1, 1
+        if self.step_count < 100:           # quiet period
+            ns, ew = 1, 1
+        elif self.step_count < 200:         # morning rush - N/S heavy
+            ns, ew = 5, 1
+        elif self.step_count < 300:         # midday - moderate and balanced
+            ns, ew = 2, 2
+        elif self.step_count < 400:         # evening rush - both directions busy
+            ns, ew = 4, 3
+        else:                               # night - low traffic
+            ns, ew = 1, 1
+        
+        # returns final N/S & E/W values after multiplier is accounted for
+        return ns * self.ns_multiplier, ew * self.ew_multiplier
 
 
 
