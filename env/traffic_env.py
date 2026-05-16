@@ -60,6 +60,13 @@ class TrafficEnv(gym.Env):
         self.step_count = 0
 
 
+        # randomizes arrival rate multipliers at the start of each episode
+        # -> forces agent to learn a general policy across many traffic conditions
+        # -> range 0.5 to 2.0 covers quiet to heavy surge conditions
+        self.ns_multiplier = np.random.uniform(0.5, 2.0)
+        self.ew_multiplier = np.random.uniform(0.5, 2.0)
+
+
         # called so that the RL algorithm knows what the starting environment looks like
         # packages all 5 state var's into a numpy array
         # -> list of numbers that the agent can read
@@ -69,9 +76,9 @@ class TrafficEnv(gym.Env):
 
 
     # simulates time-of-day traffic patterns to challenge agent
-    # returns N/S arrival rate & E/W arrival rate
-    # multipliers default to 1.0 (no change) during training
-    # -> multipliers can be adjusted at evaluation time to test robustness
+    # returns N/S arrival rate & E/W arrival rate scaled by their respective multipliers
+    # -> multipliers are randomized each episode during training for adversarial training
+    # -> multipliers can be set manually at evaluation time to test specific scenarios
     def _get_arrival_rates(self):
         if self.step_count < 100:           # quiet period
             ns, ew = 1, 1
