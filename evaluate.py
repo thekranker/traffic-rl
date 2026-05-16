@@ -32,48 +32,84 @@ def run_episode(env, model=None, fixed_timer=False):
 
 
 
-
-env = TrafficEnv()                          # creates an instance of the traffic environment
-model = DQN.load("dqn_traffic", env=env)    # reads the saved 'dqn_traffic.zip' and reconstructs the trained agent
-
-
-# stores the total reward of each episode for each controller type
-#   DQN agent -   trained RL agent
-#    random   -   picks action 0 or 1 randomly
-#    fixed    -   switches the light on a fixed schedule
-# run 20 episodes per controller so comparison is fair and averaged out
-dqn_rewards = []
-random_rewards = []
-fixed_rewards = []
-num_episodes = 20
+# defines three robustness scenarios to test the agent against
+# each scenario has a name and multipliers that scale the arrival rates
+# -> Normal   - identical to training conditions, serves as control
+# -> NS Surge - doubles N/S arrival rate, simulates a major event on N/S corridor
+# -> EW Surge - triples E/W arrival rate, reverses usual pattern the agent was trained on
+scenarios = [
+    {"name": "Normal",   "ns_multiplier": 1.0, "ew_multiplier": 1.0},
+    {"name": "NS Surge", "ns_multiplier": 2.0, "ew_multiplier": 1.0},
+    {"name": "EW Surge", "ns_multiplier": 1.0, "ew_multiplier": 3.0},
+]
 
 
 
-for i in range(num_episodes):                                   # runs 20 episodes for each controller
-    dqn_rewards.append(run_episode(env, model=model))           # runs the DQN agent for one episode
-    random_rewards.append(run_episode(env, model=None))         # runs the random controller for one episode
-    fixed_rewards.append(run_episode(env, fixed_timer=True))    # runs the fixed timer controller for one episode
+model = DQN.load("dqn_traffic")     # loads the saved trained agent from 'dqn_traffic.zip'
+num_episodes = 20                   # the number of episodes run per controller per scenario
+
+results = {}                        # dictionary to store the results for every scenario
 
 
 
-print(f"DQN Average Reward:        {np.mean(dqn_rewards):.0f}")     # prints the mean DQN agent's reward
-print(f"Random Average Reward:      {np.mean(random_rewards):.0f}") # prints the mean random signal reward
-print(f"Fixed Timer Average Reward: {np.mean(fixed_rewards):.0f}")  # prints the mean fixed timer reward
+
+# for loop to iterate through each of the three scenarios
+# creates three different traffic environments for robustness testing
+for scenario in scenarios:
+    env = TrafficEnv(
+        ns_multiplier=scenario["ns_multiplier"],
+        ew_multiplier=scenario["ew_multiplier"]
+    )
+    
+    dqn_rewards = []        # stores DQN agent rewards
+    random_rewards = []     # stores random signal rewards
+    fixed_rewards = []      # stores fixed timer rewards
+
+
+    # runs 20 episodes for each controller in this scenario
+    for _ in range(num_episodes):
+        dqn_rewards.append(run_episode(env, model=model))           # runs DQN agent for one episode
+        random_rewards.append(run_episode(env, model=None))         # runs random controller for one episode
+        fixed_rewards.append(run_episode(env, fixed_timer=True))    # runs fixed timer for one episode
+
+
+    # stores results for this scenario in the results disctionary
+    # -> maps each controller name to its list of 20 rewards
+    results[scenario["name"]] = {
+        "DQN":        dqn_rewards,
+        "Fixed Timer": fixed_rewards,
+        "Random":     random_rewards
+    }
 
 
 
-# plots the comparison of all three controllers across 20 episodes
-episodes = list(range(1, num_episodes + 1))     # forces the chart to use 1-20 values for x axis
-plt.figure(figsize=(10, 6))                     # makes the chart wider and taller for better visibility
+# loops through the results dictionary and prints a summary of each scenario
+for scenario_name, controllers in results.items():              # iterates through outer dictionary -> gives scenario name
+    print(f"\n--- {scenario_name} ---")                         # prints scenario name header
+    for controller_name, rewards in controllers.items():        # iterates through inner dictionary -> gives controller name
+        print(f"{controller_name}: {np.mean(rewards):.0f}")     # prints controller name and its avg reward across the 20 episodes
 
-plt.plot(episodes, dqn_rewards, label="DQN")            # draws a line for DQN agent rewards
-plt.plot(episodes, fixed_rewards, label="Fixed Timer")  # draws a line for fixed timer rewards
-plt.plot(episodes, random_rewards, label="Random")      # draws a line for random signal rewards
 
-plt.xlabel("Episode")                                   # x axis label
-plt.ylabel("Total Reward")                              # y axis label
-plt.title("DQN vs Fixed Timer vs Random Controller")    # chart title
-plt.legend()                                            # draws legend to identify each line
-plt.tight_layout()                                      # prevents labels from being cut off
-plt.savefig("results.png")                              # saves chart as image under 'results.png'
-plt.show()                                              # display chart on screen
+
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))     # creates a figure with 3 side-by-side charts (one for each scenario)
+
+# loops through results and draws one chart per scenario
+for i, (scenario_name, controllers) in enumerate(results.items()):
+    ax = axes[i]                                    # selects the correct chart slot (0=Normal, 1=NS Surge, 2=EW Surge)
+    episodes = list(range(1, num_episodes + 1))     # forces x axis to use 1-20 episode numbers
+
+    # draws a line for each controller in this scenario
+    for controller_name, rewards in controllers.items():
+        ax.plot(episodes, rewards, label=controller_name)   # plots rewards for this controller
+
+    ax.set_title(scenario_name)     # sets chart title to scenario name
+    ax.set_xlabel("Episode")        # x axis label
+    ax.set_ylabel("Total Reward")   # y axis label
+    ax.legend()                     # draws legend identifying each controller line
+
+
+plt.tight_layout()                          # adjusts spacing between charts to prevent overlap
+plt.savefig("robustness_results.png")       # saves all three charts as a single image
+plt.show()                                  # displays the figure on screen
+print("Robustness results saved.")          # confirms the robustness results were saved successfully
