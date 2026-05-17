@@ -71,11 +71,10 @@ class TrafficEnv(gym.Env):
         ratio = self.ns_queue / (self.ew_queue + 1)
 
 
-        # randomizes arrival rate multipliers at the start of each episode
-        # -> forces agent to learn a general policy across many traffic conditions
-        # -> range 0.5 to 2.0 covers quiet to heavy surge conditions
-        self.ns_multiplier = np.random.uniform(0.5, 2.0)
-        self.ew_multiplier = np.random.uniform(0.5, 2.0)
+        # multipliers fixed at 1.0 for stable base training
+        # adversarial randomization will be re-enabled once base policy converges
+        self.ns_multiplier = 1.0
+        self.ew_multiplier = 1.0
 
 
         # called so that the RL algorithm knows what the starting environment looks like
@@ -88,7 +87,7 @@ class TrafficEnv(gym.Env):
 
     # returns real-world N/S and E/W arrival rates based on current hour of the day
     # uses data from Rural Rd & University Dr (Tempe, 2016) loaded from arrival_rates.csv
-    # -> multipliers are randomized each episode during training for adversarial training
+    # -> multipliers fixed at 1.0 during base training for stability
     # -> multipliers can be set manually at evaluation time to test specific scenarios
     def _get_arrival_rates(self):
         hour = (self.step_count // 240) % 24    # converts timestep to hour of day (1 timestep = 15 seconds, 240 timesteps = 1 hour)
