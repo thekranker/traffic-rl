@@ -18,12 +18,14 @@ class TrainingMetricsCallback(BaseCallback):
 
 
     # called automatically by Stable-baselines3 every single timestep during training
+    # only records data when a new episode has completed to avoid duplicate entries
+    # -> compares latest buffer reward to last recorded reward to detect new episodes
     def _on_step(self) -> bool:
-
-        # 'self.model.ep_info_buffer' - buffer that stores information about recently completed episodes
-        # 'len > 0' ensures that at least one episode has finished before trying to read from it
+        # only record when a new episode has completed
+        # checks if buffer has grown since last check to avoid duplicate recording
         if len(self.model.ep_info_buffer) > 0:
-            latest = self.model.ep_info_buffer[-1]      # sets the latest episode
-            self.episode_rewards.append(latest['r'])    # appends the total reward from the latest episode
-            self.episode_lengths.append(latest['l'])    # appends the length from the latest episode
+            if len(self.episode_rewards) == 0 or self.model.ep_info_buffer[-1]['r'] != self.episode_rewards[-1]:
+                latest = self.model.ep_info_buffer[-1]
+                self.episode_rewards.append(latest['r'])    # appends total reward from completed episode
+                self.episode_lengths.append(latest['l'])    # appends length of completed episode
         return True

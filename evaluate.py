@@ -1,5 +1,5 @@
 from env.traffic_env import TrafficEnv  # import the traffic environment
-from stable_baselines3 import DQN       # RL algorithm being used to train the agent
+from stable_baselines3 import PPO       # RL algorithm being used to train the agent
 import numpy as np                      # will handle the math and arrays
 import matplotlib.pyplot as plt         # used for plotting the comparison results
 
@@ -45,7 +45,7 @@ scenarios = [
 
 
 
-model = DQN.load("dqn_traffic")     # loads the saved trained agent from 'dqn_traffic.zip'
+model = PPO.load("ppo_traffic")     # loads the saved trained agent from 'ppo_traffic.zip'
 num_episodes = 20                   # the number of episodes run per controller per scenario
 
 results = {}                        # dictionary to store the results for every scenario
@@ -61,14 +61,14 @@ for scenario in scenarios:
         ew_multiplier=scenario["ew_multiplier"]
     )
     
-    dqn_rewards = []        # stores DQN agent rewards
+    ppo_rewards = []        # stores PPO agent rewards
     random_rewards = []     # stores random signal rewards
     fixed_rewards = []      # stores fixed timer rewards
 
 
     # runs 20 episodes for each controller in this scenario
     for _ in range(num_episodes):
-        dqn_rewards.append(run_episode(env, model=model))           # runs DQN agent for one episode
+        ppo_rewards.append(run_episode(env, model=model))           # runs PPO agent for one episode
         random_rewards.append(run_episode(env, model=None))         # runs random controller for one episode
         fixed_rewards.append(run_episode(env, fixed_timer=True))    # runs fixed timer for one episode
 
@@ -76,9 +76,9 @@ for scenario in scenarios:
     # stores results for this scenario in the results disctionary
     # -> maps each controller name to its list of 20 rewards
     results[scenario["name"]] = {
-        "DQN":        dqn_rewards,
+        "PPO": ppo_rewards,
         "Fixed Timer": fixed_rewards,
-        "Random":     random_rewards
+        "Random": random_rewards
     }
 
 
