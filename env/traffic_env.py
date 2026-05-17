@@ -138,15 +138,15 @@ class TrafficEnv(gym.Env):
 
         # calculates reward
         # penalizes agent for either
-        # - any waiting car
-        # - changing green lights (to prevent rapid switching)
-        # - an imbalance in the number of cars on each side (ex: 40 on N/S and 0 on E/W)
-        # - the number of cars waiting on one side exceeds the max permitted
-        # divided by 5760 to normalize reward scale across the full episode length
+        # - any waiting car (scaled by /100)
+        # - changing green lights to prevent rapid switching (scaled by /10)
+        # - an imbalance in the number of cars on each side (scaled by /100)
+        # - the number of cars waiting on one side exceeds the max permitted (scaled by /10)
+        # components scaled individually to keep reward in a reasonable range
         wait = self.ns_queue + self.ew_queue
         imbalance_penalty = abs(self.ns_queue - self.ew_queue) * 0.5
         overflow_penalty = 50 if self.ns_queue > self.max_queue or self.ew_queue > self.max_queue else 0
-        reward = (-wait - switch_penalty - imbalance_penalty - overflow_penalty) / 5760
+        reward = -wait/100 - switch_penalty/10 - imbalance_penalty/100 - overflow_penalty/10
         self.step_count += 1
 
 
