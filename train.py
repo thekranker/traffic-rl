@@ -8,13 +8,15 @@ import numpy as np                              # used for math and array utilit
 env = TrafficEnv()  # creates an instance of the traffic environment
 
 
-# creates the PPO agent - three things passed in
+# creates the PPO agent - four things passed in
 # -> 'MlpPolicy' - tells PPO to use the 'Multi-Layer Perceptron' neural network internally
-# -> 'env' - the environment the agent train in
+# -> 'env' - the environment the agent trains in
+# -> 'n_steps=5760' - collects one full 24-hour episode before each update (default is 2048)
 # -> 'verbose=1' - tells the algorithm to print training progress to the terminal
 model = PPO(
     "MlpPolicy",
     env,
+    n_steps=5760,
     verbose=1
 )
 
