@@ -40,11 +40,10 @@ data['hour'] = data['time'].apply(lambda x: int(x.split(':')[0]))
 hourly = data.groupby('hour')[['NB', 'SB']].sum()
 
 
-# convert hourly vehicle counts to per-minute arrival rates
-# 1 timestep = 1 minute, 1440 timesteps = 24 hour episode
-# divide hourly totals by 60 to get average vehicles arriving per minute
-hourly['NS_rate'] = hourly['NB'] / 60
-hourly['EW_rate'] = hourly['SB'] / 60
+# 1 timestep = 15 seconds, 5760 timesteps = 24 hour episode
+# divide hourly totals by 240 to get average vehicles arriving per 15 seconds
+hourly['NS_rate'] = hourly['NB'] / 240
+hourly['EW_rate'] = hourly['SB'] / 240
 
 
 print(hourly[['NS_rate', 'EW_rate']].to_string())   # used to view the per minute traffic rates (cars arriving at the intersection)

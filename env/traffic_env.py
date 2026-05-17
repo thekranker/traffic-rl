@@ -1,6 +1,13 @@
 import numpy as np          # will handle the math and arrays
 import gymnasium as gym     # provides template for environment to follow
+import pandas as pd         # used to load the real-world arrival rates CSV
 
+
+
+# load real-world arrival rates from Rural Rd & University Dr (Tempe, 2016)
+# index_col="hour" allows lookup by hour number (ex: ARRIVAL_RATES.loc[7] = hour 7 rates)
+# loaded once at startup as a constant - never changes during training
+ARRIVAL_RATES = pd.read_csv("data/arrival_rates.csv", index_col="hour")
 
 
 
@@ -24,12 +31,12 @@ class TrafficEnv(gym.Env):
 
 
         # defines what the agent can see
-        # agent sees 6 numbers between 0-500
-        # - N/S queue length
-        # - E/W queue length
-        # - current phase
+        # agent sees 6 numbers
+        # - N/S queue length (0-75)
+        # - E/W queue length (0-75)
+        # - current phase (0 or 1)
         # - time spent in phase
-        # - current timestep (step_count) - gives agent explicit time of day awareness
+        # - current timestep (step_count) - gives agent explicit time of day awareness (0-5760)
         # - N/S to E/W queue ratio - gives agent explicit relative busyness awareness
         self.observation_space = gym.spaces.Box(
             low=0, high=500, shape=(6,), dtype=np.float32
@@ -43,8 +50,8 @@ class TrafficEnv(gym.Env):
         self.current_phase = 0              # which direction has the green light currently
         self.time_in_phase = 0              # how long has the green light been green for
         self.step_count = 0                 # how many timesteps have passed in the current episode
-        self.min_green_time = 5             # minimum timesteps a light must stay green before switching is allowed
-        self.max_queue = 50                 # maximum queue length before overflow penalty is applied
+        self.min_green_time = 1             # minimum timesteps a light must stay green before switching is allowed (1 timestep = 15 sec)
+        self.max_queue = 75                 # maximum queue length before overflow penalty is applied
         self.ns_multiplier = ns_multiplier  # scales N/S arrival rates for robustness testing
         self.ew_multiplier = ew_multiplier  # scales E/W arrival rates for robustness testing
 
@@ -79,30 +86,20 @@ class TrafficEnv(gym.Env):
 
 
 
-    # simulates time-of-day traffic patterns to challenge agent
-    # returns N/S arrival rate & E/W arrival rate scaled by their respective multipliers
+    # returns real-world N/S and E/W arrival rates based on current hour of the day
+    # uses data from Rural Rd & University Dr (Tempe, 2016) loaded from arrival_rates.csv
     # -> multipliers are randomized each episode during training for adversarial training
     # -> multipliers can be set manually at evaluation time to test specific scenarios
     def _get_arrival_rates(self):
-        if self.step_count < 100:           # quiet period
-            ns, ew = 1, 1
-        elif self.step_count < 200:         # morning rush - N/S heavy
-            ns, ew = 5, 1
-        elif self.step_count < 300:         # midday - moderate and balanced
-            ns, ew = 2, 2
-        elif self.step_count < 400:         # evening rush - both directions busy
-            ns, ew = 4, 3
-        else:                               # night - low traffic
-            ns, ew = 1, 1
-        
-        # returns final N/S & E/W values after multiplier is accounted for
+        hour = (self.step_count // 240) % 24    # converts timestep to hour of day (1 timestep = 15 seconds, 240 timesteps = 1 hour)
+        ns = ARRIVAL_RATES.loc[hour, 'NS_rate'] # looks up real N/S arrival rate for this hour
+        ew = ARRIVAL_RATES.loc[hour, 'EW_rate'] # looks up real E/W arrival rate for this hour
         return ns * self.ns_multiplier, ew * self.ew_multiplier
 
 
 
 
-    # called once every timestep
-    # timestep can be thought of as one second passing at the intersection
+    # called once every timestep (1 timestep = 15 seconds)
     # 1.) when called, agent passes in an action (0 or 1)
     # 2.) the simulation updates
     # 3.) the environment hands back what happened
@@ -116,13 +113,13 @@ class TrafficEnv(gym.Env):
 
 
         # clear cars on the green signal phase
-        # if 'current_phase' = 0, we let 3 cars through NS queue each timestep
-        # if 'current_phase' = 1, we let 3 cars through EW queue each timestep
+        # if 'current_phase' = 0, we let 6 cars through NS queue each timestep (15 seconds)
+        # if 'current_phase' = 1, we let 6 cars through EW queue each timestep (15 seconds)
         # max(0, ...) such that queue never goes negative
         if self.current_phase == 0:
-            self.ns_queue = max(0, self.ns_queue - 5)
+            self.ns_queue = max(0, self.ns_queue - 6)
         else:
-            self.ew_queue = max(0, self.ew_queue - 5)
+            self.ew_queue = max(0, self.ew_queue - 6)
 
 
         # calculate switch penalty before phase updates
@@ -153,8 +150,8 @@ class TrafficEnv(gym.Env):
         self.step_count += 1
 
 
-        # end episode after 500 timesteps
-        done = self.step_count >= 500
+        # end episode after 5760 timesteps (5760 x 15 seconds = 24 hours)
+        done = self.step_count >= 5760
 
     
         # calculates the ratio of cars in the N/S queue to the E/W queue
