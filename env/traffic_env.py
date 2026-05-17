@@ -52,6 +52,8 @@ class TrafficEnv(gym.Env):
         self.step_count = 0                 # how many timesteps have passed in the current episode
         self.min_green_time = 1             # minimum timesteps a light must stay green before switching is allowed (1 timestep = 15 sec)
         self.max_queue = 75                 # maximum queue length - reserved for future overflow penalty
+        self.total_wait_time = 0            # cumulative waiting time across all cars in episode (in timesteps)
+        self.total_cars_cleared = 0         # total cars that cleared the intersection in episode
         self.ns_multiplier = ns_multiplier  # scales N/S arrival rates for robustness testing
         self.ew_multiplier = ew_multiplier  # scales E/W arrival rates for robustness testing
 
@@ -66,6 +68,8 @@ class TrafficEnv(gym.Env):
         self.current_phase = 0
         self.time_in_phase = 0
         self.step_count = 0
+        self.total_wait_time = 0
+        self.total_cars_cleared = 0
 
         # calculates the ratio of cars in the N/S queue to the E/W queue
         ratio = self.ns_queue / (self.ew_queue + 1)
@@ -111,14 +115,17 @@ class TrafficEnv(gym.Env):
 
 
 
-        # clear cars on the green signal phase
-        # if 'current_phase' = 0, we let 6 cars through NS queue each timestep (15 seconds)
-        # if 'current_phase' = 1, we let 6 cars through EW queue each timestep (15 seconds)
-        # max(0, ...) such that queue never goes negative
+        # clear cars on the green signal phase and track how many cleared
+        # 'cleared' = actual number of cars that passed through (capped at 6 per timestep)
+        # uses min() instead of max(0, queue-6) so we can track exact cars cleared
         if self.current_phase == 0:
-            self.ns_queue = max(0, self.ns_queue - 6)
+            cleared = min(self.ns_queue, 6)             # actual number of N/S cars that cleared
+            self.ns_queue -= cleared                    # remove cleared cars from N/S queue
+            self.total_cars_cleared += cleared          # add to total cars cleared counter
         else:
-            self.ew_queue = max(0, self.ew_queue - 6)
+            cleared = min(self.ew_queue, 6)             # actual number of E/W cars that cleared
+            self.ew_queue -= cleared                    # remove cleared cars from E/W queue
+            self.total_cars_cleared += cleared          # add to total cars cleared counter
 
 
 
@@ -135,7 +142,8 @@ class TrafficEnv(gym.Env):
         # calculates reward
         # uses negative total queue length as the reward signal
         # simple and direct - agent's only goal is to minimize cars waiting
-        reward = -(self.ns_queue + self.ew_queue)
+        reward = -(self.ns_queue + self.ew_queue)               # subtracts every waiting car from agent's reward
+        self.total_wait_time += self.ns_queue + self.ew_queue   # every waiting car adds 1 timestep of wait
         self.step_count += 1
 
 

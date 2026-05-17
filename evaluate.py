@@ -28,7 +28,8 @@ def run_episode(env, model=None, fixed_timer=False):
         if done:
             break
             
-    return total_reward                             # return total reward
+    avg_wait_seconds = (env.total_wait_time / max(env.total_cars_cleared, 1)) * 15      # calculate the average wait time of a car
+    return total_reward, avg_wait_seconds                                               # returns the total reward & average car wait time
 
 
 
@@ -64,21 +65,35 @@ for scenario in scenarios:
     ppo_rewards = []        # stores PPO agent rewards
     random_rewards = []     # stores random signal rewards
     fixed_rewards = []      # stores fixed timer rewards
+    ppo_waits = []          # stores PPO agent average wait times
+    random_waits = []       # stores random controller average wait times
+    fixed_waits = []        # stores fixed timer average wait times
+
 
 
     # runs 20 episodes for each controller in this scenario
+    # stores both total reward and average wait time per car for each episode
     for _ in range(num_episodes):
-        ppo_rewards.append(run_episode(env, model=model))           # runs PPO agent for one episode
-        random_rewards.append(run_episode(env, model=None))         # runs random controller for one episode
-        fixed_rewards.append(run_episode(env, fixed_timer=True))    # runs fixed timer for one episode
+        reward, wait = run_episode(env, model=model)        # runs PPO agent - gets reward and avg wait
+        ppo_rewards.append(reward)                          # stores total reward
+        ppo_waits.append(wait)                              # stores avg wait time in seconds
+
+        reward, wait = run_episode(env, model=None)         # runs random controller - gets reward and avg wait
+        random_rewards.append(reward)                       # stores total reward
+        random_waits.append(wait)                           # stores avg wait time in seconds
+
+        reward, wait = run_episode(env, fixed_timer=True)   # runs fixed timer - gets reward and avg wait
+        fixed_rewards.append(reward)                        # stores total reward
+        fixed_waits.append(wait)                            # stores avg wait time in seconds
 
 
-    # stores results for this scenario in the results disctionary
-    # -> maps each controller name to its list of 20 rewards
+
+    # stores results for this scenario in the results dictionary
+    # -> each controller maps to a dictionary with both rewards and wait times
     results[scenario["name"]] = {
-        "PPO": ppo_rewards,
-        "Fixed Timer": fixed_rewards,
-        "Random": random_rewards
+        "PPO":         {"rewards": ppo_rewards,   "waits": ppo_waits},
+        "Fixed Timer": {"rewards": fixed_rewards,  "waits": fixed_waits},
+        "Random":      {"rewards": random_rewards, "waits": random_waits}
     }
 
 
@@ -86,8 +101,8 @@ for scenario in scenarios:
 # loops through the results dictionary and prints a summary of each scenario
 for scenario_name, controllers in results.items():              # iterates through outer dictionary -> gives scenario name
     print(f"\n--- {scenario_name} ---")                         # prints scenario name header
-    for controller_name, rewards in controllers.items():        # iterates through inner dictionary -> gives controller name
-        print(f"{controller_name}: {np.mean(rewards):.0f}")     # prints controller name and its avg reward across the 20 episodes
+    for controller_name, data in controllers.items():           # iterates through inner dictionary -> gives controller data
+        print(f"{controller_name}: reward={np.mean(data['rewards']):.0f} | avg wait={np.mean(data['waits']):.1f}s")     # prints data
 
 
 
@@ -123,8 +138,8 @@ for i, (scenario_name, controllers) in enumerate(results.items()):
     episodes = list(range(1, num_episodes + 1))     # forces x axis to use 1-20 episode numbers
 
     # draws a line for each controller in this scenario
-    for controller_name, rewards in controllers.items():
-        ax.plot(episodes, rewards, label=controller_name)   # plots rewards for this controller
+    for controller_name, data in controllers.items():
+        ax.plot(episodes, data['rewards'], label=controller_name)   # plots rewards for this controller
 
     ax.set_title(scenario_name)     # sets chart title to scenario name
     ax.set_xlabel("Episode")        # x axis label
