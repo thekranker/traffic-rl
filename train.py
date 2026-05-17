@@ -20,10 +20,10 @@ model = DQN(
 
 
 # runs the training of the agent
-# note that 5760 timesteps = 1 episode (2,000,000 timesteps = ~347 episodes)
+# note that 5760 timesteps = 1 episode (10,000,000 timesteps = ~1736 episodes)
 # callback records episode rewards and lengths throughout training for plotting the learning curve
 callback = TrainingMetricsCallback()
-model.learn(total_timesteps=2000000, callback=callback)
+model.learn(total_timesteps=10000000, callback=callback)
 
 
 
@@ -39,8 +39,8 @@ plt.figure(figsize=(10, 6))             # makes the chart wider and taller for b
 # raw episode rewards (faded)
 plt.plot(callback.episode_rewards, alpha=0.3, color='gray', label="Raw")
 
-# 20 episode rolling average
-plt.plot(np.convolve(callback.episode_rewards, np.ones(20)/20, mode='valid'), color='steelblue', label="Smoothed")
+# 100 episode rolling average
+plt.plot(np.convolve(callback.episode_rewards, np.ones(100)/100, mode='valid'), color='steelblue', label="Smoothed")
 
 plt.xlabel("Episode")                   # x axis label
 plt.ylabel("Total Reward")              # y axis label
