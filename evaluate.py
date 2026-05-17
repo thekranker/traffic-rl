@@ -92,6 +92,29 @@ for scenario_name, controllers in results.items():              # iterates throu
 
 
 
+# debug block - runs one episode and records every action the PPO agent takes
+# used to understand what strategy the agent has learned
+# -> ~50/50 split = agent learned nothing meaningful
+# -> heavily skewed = agent learned to favor one direction
+# -> frequent switching = agent may be switching too often
+env_debug = TrafficEnv()
+obs, _ = env_debug.reset()      # reset environment to the start of a new episode
+actions = []                    # empty list that holds every action the agent will take throughout the episode
+for _ in range(5760):           # one full 24-hour episode
+    action, _ = model.predict(obs)                      # agent picks an action
+    actions.append(int(action))                         # record the action
+    obs, _, done, _, _ = env_debug.step(int(action))    # steps the environment forward with the picked action
+    if done:
+        break
+
+# prints the percentage of time the agent chose each action
+print(f"\nDebug - PPO action distribution:")
+print(f"NS green (action 0): {actions.count(0)} times ({actions.count(0)/len(actions)*100:.1f}%)")  # divides actions to get a percentage
+print(f"EW green (action 1): {actions.count(1)} times ({actions.count(1)/len(actions)*100:.1f}%)")  # divides actions to get a percentage
+
+
+
+
 fig, axes = plt.subplots(1, 3, figsize=(15, 5))     # creates a figure with 3 side-by-side charts (one for each scenario)
 
 # loops through results and draws one chart per scenario

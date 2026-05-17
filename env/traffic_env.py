@@ -51,7 +51,7 @@ class TrafficEnv(gym.Env):
         self.time_in_phase = 0              # how long has the green light been green for
         self.step_count = 0                 # how many timesteps have passed in the current episode
         self.min_green_time = 1             # minimum timesteps a light must stay green before switching is allowed (1 timestep = 15 sec)
-        self.max_queue = 75                 # maximum queue length before overflow penalty is applied
+        self.max_queue = 75                 # maximum queue length - reserved for future overflow penalty
         self.ns_multiplier = ns_multiplier  # scales N/S arrival rates for robustness testing
         self.ew_multiplier = ew_multiplier  # scales E/W arrival rates for robustness testing
 
@@ -121,10 +121,6 @@ class TrafficEnv(gym.Env):
             self.ew_queue = max(0, self.ew_queue - 6)
 
 
-        # calculate switch penalty before phase updates
-        # -> penalizes agent for switching phases uneccessarily
-        switch_penalty = 5 if action != self.current_phase and self.time_in_phase >= self.min_green_time else 0
-
 
         # handle phase switch
         # switches if agent picks a different action AND the light has been green for long enough
@@ -137,16 +133,9 @@ class TrafficEnv(gym.Env):
 
 
         # calculates reward
-        # penalizes agent for either
-        # - any waiting car (scaled by /100)
-        # - changing green lights to prevent rapid switching (scaled by /10)
-        # - an imbalance in the number of cars on each side (scaled by /100)
-        # - the number of cars waiting on one side exceeds the max permitted (scaled by /10)
-        # components scaled individually to keep reward in a reasonable range
-        wait = self.ns_queue + self.ew_queue
-        imbalance_penalty = abs(self.ns_queue - self.ew_queue) * 0.5
-        overflow_penalty = 50 if self.ns_queue > self.max_queue or self.ew_queue > self.max_queue else 0
-        reward = -wait/100 - switch_penalty/10 - imbalance_penalty/100 - overflow_penalty/10
+        # uses negative total queue length as the reward signal
+        # simple and direct - agent's only goal is to minimize cars waiting
+        reward = -(self.ns_queue + self.ew_queue)
         self.step_count += 1
 
 
