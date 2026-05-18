@@ -1,5 +1,5 @@
 from env.traffic_env import TrafficEnv  # import the traffic environment
-from stable_baselines3 import PPO       # RL algorithm being used to train the agent
+from stable_baselines3 import DQN       # RL algorithm being used to train the agent
 import numpy as np                      # will handle the math and arrays
 import matplotlib.pyplot as plt         # used for plotting the comparison results
 
@@ -46,7 +46,7 @@ scenarios = [
 
 
 
-model = PPO.load("ppo_traffic")     # loads the saved trained agent from 'ppo_traffic.zip'
+model = DQN.load("dqn_traffic")     # loads the saved trained agent from 'dqn_traffic.zip'
 num_episodes = 20                   # the number of episodes run per controller per scenario
 
 results = {}                        # dictionary to store the results for every scenario
@@ -62,10 +62,10 @@ for scenario in scenarios:
         ew_multiplier=scenario["ew_multiplier"]
     )
     
-    ppo_rewards = []        # stores PPO agent rewards
+    dqn_rewards = []        # stores DQN agent rewards
     random_rewards = []     # stores random signal rewards
     fixed_rewards = []      # stores fixed timer rewards
-    ppo_waits = []          # stores PPO agent average wait times
+    dqn_waits = []          # stores DQN agent average wait times
     random_waits = []       # stores random controller average wait times
     fixed_waits = []        # stores fixed timer average wait times
 
@@ -74,9 +74,9 @@ for scenario in scenarios:
     # runs 20 episodes for each controller in this scenario
     # stores both total reward and average wait time per car for each episode
     for _ in range(num_episodes):
-        reward, wait = run_episode(env, model=model)        # runs PPO agent - gets reward and avg wait
-        ppo_rewards.append(reward)                          # stores total reward
-        ppo_waits.append(wait)                              # stores avg wait time in seconds
+        reward, wait = run_episode(env, model=model)        # runs DQN agent - gets reward and avg wait
+        dqn_rewards.append(reward)                          # stores total reward
+        dqn_waits.append(wait)                              # stores avg wait time in seconds
 
         reward, wait = run_episode(env, model=None)         # runs random controller - gets reward and avg wait
         random_rewards.append(reward)                       # stores total reward
@@ -91,7 +91,7 @@ for scenario in scenarios:
     # stores results for this scenario in the results dictionary
     # -> each controller maps to a dictionary with both rewards and wait times
     results[scenario["name"]] = {
-        "PPO":         {"rewards": ppo_rewards,   "waits": ppo_waits},
+        "DQN":         {"rewards": dqn_rewards,    "waits": dqn_waits},
         "Fixed Timer": {"rewards": fixed_rewards,  "waits": fixed_waits},
         "Random":      {"rewards": random_rewards, "waits": random_waits}
     }
@@ -107,7 +107,7 @@ for scenario_name, controllers in results.items():              # iterates throu
 
 
 
-# debug block - runs one episode and records every action the PPO agent takes
+# debug block - runs one episode and records every action the DQN agent takes
 # used to understand what strategy the agent has learned
 # -> ~50/50 split = agent learned nothing meaningful
 # -> heavily skewed = agent learned to favor one direction
@@ -123,7 +123,7 @@ for _ in range(500):            # one full episode
         break
 
 # prints the percentage of time the agent chose each action
-print(f"\nDebug - PPO action distribution:")
+print(f"\nDebug - DQN action distribution:")
 print(f"NS green (action 0): {actions.count(0)} times ({actions.count(0)/len(actions)*100:.1f}%)")  # divides actions to get a percentage
 print(f"EW green (action 1): {actions.count(1)} times ({actions.count(1)/len(actions)*100:.1f}%)")  # divides actions to get a percentage
 
