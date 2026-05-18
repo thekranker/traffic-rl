@@ -13,8 +13,8 @@ def run_episode(env, model=None, fixed_timer=False):
     total_reward = 0        # resets total reward
 
 
-    # runs loop for 5760 timesteps - aka. one episode
-    for _ in range(5760):
+    # runs loop for 500 timesteps - aka. one episode
+    for _ in range(500):
         if model is not None:                       # if a model is passed in
             action, _ = model.predict(obs)          # model picks an action - "model looks at current state and makes an informed decision"
         elif fixed_timer:                           # if fixed timer is enabled
@@ -115,7 +115,7 @@ for scenario_name, controllers in results.items():              # iterates throu
 env_debug = TrafficEnv()
 obs, _ = env_debug.reset()      # reset environment to the start of a new episode
 actions = []                    # empty list that holds every action the agent will take throughout the episode
-for _ in range(5760):           # one full 24-hour episode
+for _ in range(500):            # one full episode
     action, _ = model.predict(obs)                      # agent picks an action
     actions.append(int(action))                         # record the action
     obs, _, done, _, _ = env_debug.step(int(action))    # steps the environment forward with the picked action

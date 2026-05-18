@@ -4,11 +4,8 @@ import pandas as pd         # used to load the real-world arrival rates CSV
 
 
 
-# load real-world arrival rates from Rural Rd & University Dr (Tempe, 2016)
-# index_col="hour" allows lookup by hour number (ex: ARRIVAL_RATES.loc[7] = hour 7 rates)
-# loaded once at startup as a constant - never changes during training
-ARRIVAL_RATES = pd.read_csv("data/arrival_rates.csv", index_col="hour")
-
+# real-world arrival rates temporarily disabled - re-enable once agent demonstrates stable learning
+# ARRIVAL_RATES = pd.read_csv("data/arrival_rates.csv", index_col="hour")
 
 
 # blueprint for the environment
@@ -36,7 +33,7 @@ class TrafficEnv(gym.Env):
         # - E/W queue length (0-75)
         # - current phase (0 or 1)
         # - time spent in phase
-        # - current timestep (step_count) - gives agent explicit time of day awareness (0-5760)
+        # - current timestep (step_count) - gives agent explicit time of day awareness (0-500)
         # - N/S to E/W queue ratio - gives agent explicit relative busyness awareness
         self.observation_space = gym.spaces.Box(
             low=0, high=500, shape=(6,), dtype=np.float32
@@ -50,7 +47,7 @@ class TrafficEnv(gym.Env):
         self.current_phase = 0              # which direction has the green light currently
         self.time_in_phase = 0              # how long has the green light been green for
         self.step_count = 0                 # how many timesteps have passed in the current episode
-        self.min_green_time = 1             # minimum timesteps a light must stay green before switching is allowed (1 timestep = 15 sec)
+        self.min_green_time = 10            # minimum timesteps a light must stay green before switching is allowed
         self.max_queue = 75                 # maximum queue length - reserved for future overflow penalty
         self.total_wait_time = 0            # cumulative waiting time across all cars in episode (in timesteps)
         self.total_cars_cleared = 0         # total cars that cleared the intersection in episode
@@ -89,20 +86,26 @@ class TrafficEnv(gym.Env):
 
 
 
-    # returns real-world N/S and E/W arrival rates based on current hour of the day
-    # uses data from Rural Rd & University Dr (Tempe, 2016) loaded from arrival_rates.csv
-    # -> multipliers fixed at 1.0 during base training for stability
-    # -> multipliers can be set manually at evaluation time to test specific scenarios
+    # simulates time-of-day traffic patterns
+    # uses fixed asymmetric rates to give agent a clear pattern to learn
+    # real-world data will be re-enabled once agent demonstrates stable learning
     def _get_arrival_rates(self):
-        hour = (self.step_count // 240) % 24    # converts timestep to hour of day (1 timestep = 15 seconds, 240 timesteps = 1 hour)
-        ns = ARRIVAL_RATES.loc[hour, 'NS_rate'] # looks up real N/S arrival rate for this hour
-        ew = ARRIVAL_RATES.loc[hour, 'EW_rate'] # looks up real E/W arrival rate for this hour
+        if self.step_count < 100:       # quiet period
+            ns, ew = 1, 1
+        elif self.step_count < 200:     # morning rush - NS heavy
+            ns, ew = 5, 1
+        elif self.step_count < 300:     # midday - balanced
+            ns, ew = 2, 2
+        elif self.step_count < 400:     # evening rush - both busy
+            ns, ew = 4, 3
+        else:                           # night - low traffic
+            ns, ew = 1, 1
         return ns * self.ns_multiplier, ew * self.ew_multiplier
 
 
 
 
-    # called once every timestep (1 timestep = 15 seconds)
+    # called once every timestep
     # 1.) when called, agent passes in an action (0 or 1)
     # 2.) the simulation updates
     # 3.) the environment hands back what happened
@@ -116,14 +119,14 @@ class TrafficEnv(gym.Env):
 
 
         # clear cars on the green signal phase and track how many cleared
-        # 'cleared' = actual number of cars that passed through (capped at 6 per timestep)
-        # uses min() instead of max(0, queue-6) so we can track exact cars cleared
+        # 'cleared' = actual number of cars that passed through (capped at 3 per timestep)
+        # uses min() so we can track exact cars cleared
         if self.current_phase == 0:
-            cleared = min(self.ns_queue, 6)             # actual number of N/S cars that cleared
+            cleared = min(self.ns_queue, 3)             # actual number of N/S cars that cleared
             self.ns_queue -= cleared                    # remove cleared cars from N/S queue
             self.total_cars_cleared += cleared          # add to total cars cleared counter
         else:
-            cleared = min(self.ew_queue, 6)             # actual number of E/W cars that cleared
+            cleared = min(self.ew_queue, 3)             # actual number of E/W cars that cleared
             self.ew_queue -= cleared                    # remove cleared cars from E/W queue
             self.total_cars_cleared += cleared          # add to total cars cleared counter
 
@@ -147,8 +150,8 @@ class TrafficEnv(gym.Env):
         self.step_count += 1
 
 
-        # end episode after 5760 timesteps (5760 x 15 seconds = 24 hours)
-        done = self.step_count >= 5760
+        # end episode after 500 timesteps
+        done = self.step_count >= 500
 
     
         # calculates the ratio of cars in the N/S queue to the E/W queue

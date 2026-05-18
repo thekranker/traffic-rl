@@ -11,21 +11,21 @@ env = TrafficEnv()  # creates an instance of the traffic environment
 # creates the PPO agent - four things passed in
 # -> 'MlpPolicy' - tells PPO to use the 'Multi-Layer Perceptron' neural network internally
 # -> 'env' - the environment the agent trains in
-# -> 'n_steps=5760' - collects one full 24-hour episode before each update (default is 2048)
+# -> 'n_steps=500' - collects one full episode before each update (default is 2048)
 # -> 'verbose=1' - tells the algorithm to print training progress to the terminal
 model = PPO(
     "MlpPolicy",
     env,
-    n_steps=5760,
+    n_steps=500,
     verbose=1
 )
 
 
 # runs the training of the agent
-# note that 5760 timesteps = 1 episode (10,000,000 timesteps = ~1736 episodes)
+# note that 500 timesteps = 1 episode (500,000 timesteps = 1,000 episodes)
 # callback records episode rewards and lengths throughout training for plotting the learning curve
 callback = TrainingMetricsCallback()
-model.learn(total_timesteps=10000000, callback=callback)
+model.learn(total_timesteps=500000, callback=callback)
 
 
 
@@ -41,8 +41,8 @@ plt.figure(figsize=(10, 6))             # makes the chart wider and taller for b
 # raw episode rewards (faded)
 plt.plot(callback.episode_rewards, alpha=0.3, color='gray', label="Raw")
 
-# 100 episode rolling average
-plt.plot(np.convolve(callback.episode_rewards, np.ones(100)/100, mode='valid'), color='steelblue', label="Smoothed")
+# 50 episode rolling average
+plt.plot(np.convolve(callback.episode_rewards, np.ones(50)/50, mode='valid'), color='steelblue', label="Smoothed")
 
 plt.xlabel("Episode")                   # x axis label
 plt.ylabel("Total Reward")              # y axis label
